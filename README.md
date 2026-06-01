@@ -56,6 +56,19 @@ app.use((req, res, next) => {
 });
 ```
   * Restart your server and visit the `/` route, you should be prompted to log in.
+  * Add the following route into your app.js file:
+  * 
+```js
+// return JSON about the logged-in user
+app.get('/me', requiresAuth(), (req, res) => {
+    console.log("email: " + req.oidc.user.email);
+
+    // express-openid-connect provides the user on req.oidc.user
+    res.json({ user: req.oidc && req.oidc.user ? req.oidc.user : null });
+});
+```
+
+
   * Visit the `/me` route, to see the data available about the logged in user.
   * You can now use the email address of the logged in user as a parameter in your queries to personalized your site!
 
