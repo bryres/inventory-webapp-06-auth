@@ -32,7 +32,29 @@ AUTH0_ISSUER_BASE_URL= // TODO: Copy from Settings page in auth0
 APP_BASE_URL=http://localhost:3000
 AUTH0_CLIENT_ID= // TODO: Copy from Settings page in auth0
 ```
+  * Add the following code to your app.js file.
+```js
+// Auth0 configuration - pick values from environment variables
+const authConfig = {
+    authRequired: false, // change to true if you want all routes protected by default
+    auth0Logout: true,
+    secret: process.env.AUTH0_SECRET || 'change_this_secret',
+    baseURL: process.env.AUTH0_BASE_URL || `http://localhost:${port}`,
+    clientID: process.env.AUTH0_CLIENT_ID,
+    issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
 
+};
+
+// Mount the auth router which adds /login, /logout, /callback
+app.use(auth(authConfig));
+
+// expose authentication status and user to all views
+app.use((req, res, next) => {
+    res.locals.isAuthenticated = req.oidc && req.oidc.isAuthenticated && req.oidc.isAuthenticated();
+    res.locals.user = req.oidc && req.oidc.user ? req.oidc.user : null;
+    next();
+});
+```
   * Restart your server and visit the `/` route, you should be prompted to log in.
   * Visit the `/me` route, to see the data available about the logged in user.
   * You can now use the email address of the logged in user as a parameter in your queries to personalized your site!
