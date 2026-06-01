@@ -15,155 +15,29 @@ Once logged into, you can follow the `Getting Started -> Create Application` wiz
 Choose:
   * At  `Create Application`, give your app a Name and choose `Regular Web Applications` as your application type.
 
-  * At  `What technology are you using for your project`, choose `Node.js (Express)`
-
-  * At  `Choose your path`, click `Integrate Now` beneath `I want to integrate with my app`
-
-  * At  `Configure Auth0`, the `Allowed Callback URL` box should contain `http://localhost:3000/callback` and the `Allowed Logout URLs` box should contain `http://localhost:3000`. If necessary, change the numbers from `3000` to whatever your PORT value is during development.   
-
-  * At `Integrate Auth0`, take the command 
-
-    > `npm install express express-openid-connect --save`
-
-    and run it in your Terminal. This will install the `express-opendid-connect` package.
-
-    Then look at the code provided in the `Configure Router` section, which is already configured with your information. It contains 4 "lines", which we will add to our `app.js`
+  * Click on Settings.
     
-    * Copy the first `const { auth } = require('express-openid-connect');` line and add it among the other `require` statements at the top of the file.
+  * `Allowed Callback URL` box should contain `http://localhost:3000/callback` 
+  * `Allowed Logout URLs` box should contain `http://localhost:3000`. If necessary, change the numbers from `3000` to whatever your PORT value is during development.   
 
-    * Copy the `const config=...` and `app.use(auth(config))` lines except for the last section and add it after the helmet , before any of the other `app.use` lines. 
-    
-    * Then add the last line `app.get('/',...);` after the other `app.use` lines, but change the route path from `/` to `/authtest`.
-
-    The added code, in context, should look like this:
-
-    ```js
-    //Other require lines
-    ...
-    const { auth } = require('express-openid-connect');
-    ...
-
-    // Helmet middleware
-    app.use(helmet({...
-    });
-
-    // CODE FROM AUTH0:
-    const config = {
-      authRequired: false,
-      auth0Logout: true,
-      secret: 'a long, randomly-generated string stored in env',
-      baseURL: 'http://localhost:<PORT>',
-      clientID: '<YOUR CLIENT ID>',
-      issuerBaseURL: 'https://<YOUR DOMAIN>.us.auth0.com'
-    };
-
-    // auth router attaches /login, /logout, and /callback routes to the baseURL
-    app.use(auth(config));
-
-    // Rest of the app.use(...) middleware
-    ...
-
-    // req.isAuthenticated is provided from the auth router
-    app.get('/authtest', (req, res) => {
-      res.send(req.oidc.isAuthenticated() ? 'Logged in' : 'Logged out');
-    });
-
-    // Rest of the code, e.g. routes
-    ...
-    ``` 
-
-    Now go to the next section.
-  
-  * At `Test your login`, start up your server with `npm start`
-    * Follow the instructions to visit the `/login` and `/logout` routes. Auth0's monitoring should show activity. 
-
-    *  You should also visit `/authtest` after both logging in and logging out to see that the webapp is aware of your logged-in/out status.
-
-  *  At `Get the user profile information`, copy the code provided, and add them to `app.js`:
-    * The `const { requiresAuth } = require('express-openid-connect');` can be added to the top of the file.
-
-    * The other line can be added anywhere after the `app.use(auth(config))` line, among the routing code.
-
-    The added code, in context, should look like this:
-
-    ```js
-    //Other require lines
-    ...
-    const { requiresAuth } = require('express-openid-connect');
-
-    //Other code including app.use(auth(config))
-    ...
-
-    app.get('/profile', requiresAuth(), (req, res) => {
-      res.send(JSON.stringify(req.oidc.user));
-    });
-
-    // Rest of the code, e.g. routes
-    ...
-
-    ```
-  * Restart your server and visit the `/profile` route, both logged in and logged out.
-  * The wizard should be complete, and you can click `Go To Application Settings`.
-
-
-## (6.2) Securing Auth0 secrets in `.env`, setting up for deployment
-
-Our authentication basics work for our development code, but a few things need to be fixed up before we can push any changes and (re-)deploy our app.
-
-The `config` object in `app.js` contains all the Auth0 info in plaintext. These should be kept secret via environment variables.
-
-1. Add these lines to your `.env` file, replacing the values with the same values used in your `config` object.
-
-```
-AUTH0_SECRET=<SECRET>
-AUTH0_BASE_URL=http://localhost:<PORT>
-AUTH0_CLIENT_ID=<YOUR CLIENT ID>
-AUTH0_ISSUER_BASE_URL=https://<YOUR DOMAIN>.us.auth0.com
+In your terminal, run the following command to install the necessary library
+```js
+npm install express express-openid-connect --save
 ```
 
-The `<SECRET>` can technically be replaced with anything, but Auth0's `Application Settings` page provides a good `Client Secret` that you can copy and use.
+Add the following lines to your .env file:
+```js
+AUTH0_SECRET= // TODO: Copy from Settings page in auth0
+AUTH0_ISSUER_BASE_URL= // TODO: Copy from Settings page in auth0
+APP_BASE_URL=http://localhost:3000
+AUTH0_CLIENT_ID= // TODO: Copy from Settings page in auth0
+```
 
-2. Add this in the top section (among the `requires`) to your `app.js`:
-  ```js
-  const dotenv = require('dotenv');
-  dotenv.config();
-  ```
+  * Restart your server and visit the `/` route, you should be prompted to log in.
+  * Visit the `/me` route, to see the data available about the logged in user.
+  * You can now use the email address of the logged in user as a parameter in your queries to personalized your site!
 
-3. Change the `config` object in `app.js` to: 
-  ```js
-  const config = {
-    authRequired: false,
-    auth0Logout: true,
-    secret: process.env.AUTH0_SECRET,
-    baseURL: process.env.AUTH0_BASE_URL,
-    clientID: process.env.AUTH0_CLIENT_ID,
-    issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL
-  };
-  ```
-
-> Double check that your server is still able to do `/login` and `/logout` successfully.
-
-Now you can push the code without worrying about exposing the secrets. 
-
-### (6.2.1) OPTIONAL: Deployed website update
-
-If you already have a deployed app, we need the hosting platform to be given these new environment variables too. 
-
-The only one that needs to be changed for the deployed environment is the `AUTH0_BASE_URL`, which should be the URL of the actual hosted site, not `localhost`.
-
-Then, you need to update the `Application Settings` on Auth0: In the `Application URIs` section, change the `Allowed Callback URL` box from just `http://localhost:PORT/callback` to :
-  ```
-    http://localhost:PORT/callback,
-    https://<HOSTDOMAIN>/callback
-  ```
-  and the `Allowed Logout URLs` box from just `http://localhost:PORT` to:
-
-  ```
-    http://localhost:PORT,
-    https://<HOSTDOMAIN>
-  ``` 
-
-Save your changes.
+Optional: 
 ## (6.3) Adding a log-in / log-out button (+ nav bar)
 
 We obviously need a way to log in and out that's more intuitive for the user than changing the URL manually. 
